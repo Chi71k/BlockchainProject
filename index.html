@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Group DApp</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.1/dist/web3.min.js"></script>
+    <link rel="icon" href="data:;base64,=" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Study Group DApp</h1>
+
+    <div class="form-container">
+        <h3>Create Study Group</h3>
+        <input type="text" id="groupName" placeholder="Group Name" />
+        <input type="text" id="subject" placeholder="Subject" />
+        <button onclick="createGroup()">Create Group</button>
+    </div>
+
+    <h3>Available Groups</h3>
+    <div id="groupsList"></div>
+
+    <div class="form-container">
+        <h3>Join a Group</h3>
+        <input type="number" id="groupIdToJoin" placeholder="Group ID" />
+        <button onclick="joinGroup()">Join Group</button>
+        <p id="errorMessage" class="error"></p>
+    </div>
+
+    <script>
+        let web3;
+        let contract;
+        const contractAddress = "0xCd5D07f9B35ed1217Bc80AaC8908fD685A2D2e36"; 
+        const contractABI = [
+            {
+                "inputs": [
+                    { "internalType": "string", "name": "_name", "type": "string" },
+                    { "internalType": "string", "name": "_subject", "type": "string" }
+                ],
+                "name": "createGroup",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    { "indexed": true, "internalType": "address", "name": "creator", "type": "address" },
+                    { "indexed": false, "internalType": "string", "name": "groupName", "type": "string" },
+                    { "indexed": false, "internalType": "uint256", "name": "groupId", "type": "uint256" }
+                ],
+                "name": "GroupCreated",
+                "type": "event"
+            },
+            {
+                "inputs": [
+                    { "internalType": "uint256", "name": "_groupId", "type": "uint256" }
+                ],
+                "name": "joinGroup",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+                    { "indexed": true, "internalType": "uint256", "name": "groupId", "type": "uint256" }
+                ],
+                "name": "UserJoined",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "getAllGroups",
+                "outputs": [
+                    {
+                        "components": [
+                            { "internalType": "string", "name": "name", "type": "string" },
+                            { "internalType": "string", "name": "subject", "type": "string" },
+                            { "internalType": "address[]", "name": "members", "type": "address[]" }
+                        ],
+                        "internalType": "struct StudyGroups.StudyGroup[]",
+                        "name": "",
+                        "type": "tuple[]"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        async function connectMetaMask() {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                await window.ethereum.request({ method: "eth_requestAccounts" });
+                console.log("MetaMask connected");
+            } else {
+                alert("Please install MetaMask!");
+            }
+        }
+
+        async function initializeContract() {
+            contract = new web3.eth.Contract(contractABI, contractAddress);
+            console.log("Contract connected", contract);
+        }
+
+        async function createGroup() {
+            const groupName = document.getElementById("groupName").value;
+            const subject = document.getElementById("subject").value;
+
+            if (!groupName || !subject) {
+                alert("Please provide both group name and subject.");
+                return;
+            }
+
+            const accounts = await web3.eth.getAccounts();
+            contract.methods.createGroup(groupName, subject).send({ from: accounts[0] })
+                .on('receipt', (receipt) => {
+                    console.log("Group created successfully", receipt);
+                })
+                .on('error', (error) => {
+                    console.error("Error creating group", error);
+                    alert("Error: Group name might already exist.");
+                });
+        }
+
+        async function joinGroup() {
+            const groupId = document.getElementById("groupIdToJoin").value;
+            const errorMessage = document.getElementById("errorMessage");
+            errorMessage.textContent = ""; 
+
+            if (!groupId) {
+                errorMessage.textContent = "Please enter a valid group ID.";
+                return;
+            }
+
+            const accounts = await web3.eth.getAccounts();
+            contract.methods.joinGroup(groupId).send({ from: accounts[0] })
+                .on('receipt', (receipt) => {
+                    console.log("User joined group successfully", receipt);
+                })
+                .on('error', (error) => {
+                    console.error("Error joining group", error);
+                    alert("Error: You may already be in this group.");
+                });
+        }
+
+        async function getGroups() {
+            const groups = await contract.methods.getAllGroups().call();
+            const groupsList = document.getElementById("groupsList");
+            groupsList.innerHTML = ""; 
+
+            groups.forEach((group, index) => {
+                const groupElement = document.createElement("div");
+                groupElement.classList.add("group-info");
+                groupElement.innerHTML = `
+                    <p><strong>Group Name:</strong> ${group.name}</p>
+                    <p><strong>Subject:</strong> ${group.subject}</p>
+                    <p><strong>Members:</strong> ${group.members.length}</p>
+                    <p><strong>Group ID:</strong> ${index}</p>
+                `;
+                groupsList.appendChild(groupElement);
+            });
+        }
+
+        function listenToEvents() {
+            contract.events.GroupCreated()
+                .on('data', (event) => {
+                    console.log("New group created:", event.returnValues);
+                    alert(`New Group Created: ${event.returnValues.groupName}`);
+                    getGroups();
+                })
+                .on('error', (error) => {
+                    console.error("Error with GroupCreated event", error);
+                });
+
+            contract.events.UserJoined()
+                .on('data', (event) => {
+                    console.log("User joined a group:", event.returnValues);
+                    alert(`User Joined Group ID: ${event.returnValues.groupId}`);
+                    getGroups();
+                })
+                .on('error', (error) => {
+                    console.error("Error with UserJoined event", error);
+                });
+        }
+
+        window.onload = async () => {
+            await connectMetaMask();
+            await initializeContract();
+            await getGroups();
+            listenToEvents();
+        };
+    </script>
+</body>
+</html>
