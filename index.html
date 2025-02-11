@@ -1,95 +1,390 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Study Group DApp</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.8.1/dist/web3.min.js"></script>
-    <link rel="icon" href="data:;base64,=" />
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <h1>Study Group DApp</h1>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    <style>
+        body {
+            background: url('image.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Arial', sans-serif;
+            color: #ffffff;
+            text-align: center;
+        }
 
+        .form-container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            margin: 20px auto;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        input,
+        button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 90%;
+            max-width: 400px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #000;
+            background-color: #ffffff;
+        }
+
+        button {
+            background-color: #007bff;
+            color: #ffffff;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        h1,
+        h3 {
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.7);
+        }
+
+        .group-info {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            margin: 10px;
+            border-radius: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 class="text-2xl font-bold mb-4">Study Group DApp</h1>
+
+    <!-- Create Group Form -->
     <div class="form-container">
-        <h3>Create Study Group</h3>
+        <h3 class="text-xl font-semibold mb-2">Create Study Group</h3>
         <input type="text" id="groupName" placeholder="Group Name" />
         <input type="text" id="subject" placeholder="Subject" />
+        <input type="number" id="maxMembers" placeholder="Max Members" />
         <button onclick="createGroup()">Create Group</button>
     </div>
 
-    <h3>Available Groups</h3>
+    <!-- Available Groups -->
+    <h3 class="text-xl font-semibold mt-4">Available Groups</h3>
     <div id="groupsList"></div>
 
+    <!-- Join Group Form -->
     <div class="form-container">
-        <h3>Join a Group</h3>
+        <h3 class="text-xl font-semibold mb-2">Join a Group</h3>
         <input type="number" id="groupIdToJoin" placeholder="Group ID" />
+        <input type="text" id="nickname" placeholder="Nickname" />
         <button onclick="joinGroup()">Join Group</button>
-        <p id="errorMessage" class="error"></p>
+    </div>
+
+    <!-- Remove User Form -->
+    <div class="form-container">
+        <h3 class="text-xl font-semibold mb-2">Remove User from Group</h3>
+        <input type="number" id="groupIdToRemoveUser" placeholder="Group ID" />
+        <input type="text" id="userAddress" placeholder="User Address" />
+        <button onclick="removeUser()">Remove User</button>
+    </div>
+
+    <!-- Delete Group Form -->
+    <div class="form-container">
+        <h3 class="text-xl font-semibold mb-2">Delete Group</h3>
+        <input type="number" id="groupIdToDelete" placeholder="Group ID" />
+        <button onclick="deleteGroup()">Delete Group</button>
     </div>
 
     <script>
         let web3;
         let contract;
-        const contractAddress = "0xCd5D07f9B35ed1217Bc80AaC8908fD685A2D2e36"; 
+        const contractAddress = "0xE3CaD28F180f20d4AADf730e2dCb572Be8e4A0Cf";
         const contractABI = [
-            {
-                "inputs": [
-                    { "internalType": "string", "name": "_name", "type": "string" },
-                    { "internalType": "string", "name": "_subject", "type": "string" }
-                ],
-                "name": "createGroup",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    { "indexed": true, "internalType": "address", "name": "creator", "type": "address" },
-                    { "indexed": false, "internalType": "string", "name": "groupName", "type": "string" },
-                    { "indexed": false, "internalType": "uint256", "name": "groupId", "type": "uint256" }
-                ],
-                "name": "GroupCreated",
-                "type": "event"
-            },
-            {
-                "inputs": [
-                    { "internalType": "uint256", "name": "_groupId", "type": "uint256" }
-                ],
-                "name": "joinGroup",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "anonymous": false,
-                "inputs": [
-                    { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
-                    { "indexed": true, "internalType": "uint256", "name": "groupId", "type": "uint256" }
-                ],
-                "name": "UserJoined",
-                "type": "event"
-            },
-            {
-                "inputs": [],
-                "name": "getAllGroups",
-                "outputs": [
-                    {
-                        "components": [
-                            { "internalType": "string", "name": "name", "type": "string" },
-                            { "internalType": "string", "name": "subject", "type": "string" },
-                            { "internalType": "address[]", "name": "members", "type": "address[]" }
-                        ],
-                        "internalType": "struct StudyGroups.StudyGroup[]",
-                        "name": "",
-                        "type": "tuple[]"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            }
-        ];
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_subject",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_maxMembers",
+				"type": "uint256"
+			}
+		],
+		"name": "createGroup",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_groupId",
+				"type": "uint256"
+			}
+		],
+		"name": "deleteGroup",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "creator",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "groupName",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "groupId",
+				"type": "uint256"
+			}
+		],
+		"name": "GroupCreated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "groupId",
+				"type": "uint256"
+			}
+		],
+		"name": "GroupDeleted",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_groupId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_nickname",
+				"type": "string"
+			}
+		],
+		"name": "joinGroup",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_groupId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_user",
+				"type": "address"
+			}
+		],
+		"name": "removeUser",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "groupId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "nickname",
+				"type": "string"
+			}
+		],
+		"name": "UserJoined",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "groupId",
+				"type": "uint256"
+			}
+		],
+		"name": "UserRemoved",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "getAllGroups",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "subject",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "creator",
+						"type": "address"
+					},
+					{
+						"internalType": "address[]",
+						"name": "members",
+						"type": "address[]"
+					},
+					{
+						"internalType": "string[]",
+						"name": "memberNicknames",
+						"type": "string[]"
+					},
+					{
+						"internalType": "uint256",
+						"name": "maxMembers",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "exists",
+						"type": "bool"
+					}
+				],
+				"internalType": "struct StudyGroups.StudyGroup[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_groupId",
+				"type": "uint256"
+			}
+		],
+		"name": "getGroupInfo",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "groupId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "subject",
+				"type": "string"
+			},
+			{
+				"internalType": "address[]",
+				"name": "members",
+				"type": "address[]"
+			},
+			{
+				"internalType": "string[]",
+				"name": "memberNicknames",
+				"type": "string[]"
+			},
+			{
+				"internalType": "address",
+				"name": "creator",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "maxMembers",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_user",
+				"type": "address"
+			}
+		],
+		"name": "getUserGroups",
+		"outputs": [
+			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]; // Your contract ABI here
 
         async function connectMetaMask() {
             if (window.ethereum) {
@@ -103,96 +398,129 @@
 
         async function initializeContract() {
             contract = new web3.eth.Contract(contractABI, contractAddress);
-            console.log("Contract connected", contract);
         }
 
         async function createGroup() {
-            const groupName = document.getElementById("groupName").value;
-            const subject = document.getElementById("subject").value;
+            try {
+                const groupName = document.getElementById("groupName").value;
+                const subject = document.getElementById("subject").value;
+                const maxMembers = document.getElementById("maxMembers").value;
 
-            if (!groupName || !subject) {
-                alert("Please provide both group name and subject.");
-                return;
+                if (!groupName || !subject || !maxMembers || isNaN(maxMembers) || maxMembers <= 0) {
+                    alert("Please provide valid input for all fields.");
+                    return;
+                }
+
+                const accounts = await web3.eth.getAccounts();
+                await contract.methods.createGroup(groupName, subject, maxMembers).send({ from: accounts[0] });
+                alert("Group created successfully!");
+                getGroups();
+            } catch (error) {
+                alert(`Error creating group: ${error.message}`);
             }
-
-            const accounts = await web3.eth.getAccounts();
-            contract.methods.createGroup(groupName, subject).send({ from: accounts[0] })
-                .on('receipt', (receipt) => {
-                    console.log("Group created successfully", receipt);
-                })
-                .on('error', (error) => {
-                    console.error("Error creating group", error);
-                    alert("Error: Group name might already exist.");
-                });
         }
 
         async function joinGroup() {
-            const groupId = document.getElementById("groupIdToJoin").value;
-            const errorMessage = document.getElementById("errorMessage");
-            errorMessage.textContent = ""; 
+            try {
+                const groupId = document.getElementById("groupIdToJoin").value;
+                const nickname = document.getElementById("nickname").value;
 
-            if (!groupId) {
-                errorMessage.textContent = "Please enter a valid group ID.";
-                return;
+                if (!groupId || !nickname) {
+                    alert("Please provide both Group ID and Nickname.");
+                    return;
+                }
+
+                const accounts = await web3.eth.getAccounts();
+                await contract.methods.joinGroup(groupId, nickname).send({ from: accounts[0] });
+                alert("Successfully joined the group!");
+                getGroups();
+            } catch (error) {
+                alert(`Error joining group: ${error.message}`);
             }
+        }
 
-            const accounts = await web3.eth.getAccounts();
-            contract.methods.joinGroup(groupId).send({ from: accounts[0] })
-                .on('receipt', (receipt) => {
-                    console.log("User joined group successfully", receipt);
-                })
-                .on('error', (error) => {
-                    console.error("Error joining group", error);
-                    alert("Error: You may already be in this group.");
-                });
+        async function removeUser() {
+            try {
+                const groupId = document.getElementById("groupIdToRemoveUser").value;
+                const userAddress = document.getElementById("userAddress").value;
+
+                if (!groupId || !userAddress) {
+                    alert("Please provide a valid Group ID and User Address.");
+                    return;
+                }
+
+                const accounts = await web3.eth.getAccounts();
+                const creatorAddress = await contract.methods.getGroupInfo(groupId).call().then(group => group.creator);
+
+                if (accounts[0].toLowerCase() !== creatorAddress.toLowerCase()) {
+                    alert("Only the group creator can remove users.");
+                    return;
+                }
+
+                await contract.methods.removeUser(groupId, userAddress).send({ from: accounts[0] });
+                alert("User removed successfully!");
+                getGroups();
+            } catch (error) {
+                alert(`Error removing user: ${error.message}`);
+            }
+        }
+
+        async function deleteGroup() {
+            try {
+                const groupId = document.getElementById("groupIdToDelete").value;
+
+                if (!groupId) {
+                    alert("Please enter a valid Group ID.");
+                    return;
+                }
+
+                const accounts = await web3.eth.getAccounts();
+                await contract.methods.deleteGroup(groupId).send({ from: accounts[0] });
+                alert("Group deleted successfully!");
+                getGroups();
+            } catch (error) {
+                alert(`Error deleting group: ${error.message}`);
+            }
         }
 
         async function getGroups() {
-            const groups = await contract.methods.getAllGroups().call();
-            const groupsList = document.getElementById("groupsList");
-            groupsList.innerHTML = ""; 
+            try {
+                const groups = await contract.methods.getAllGroups().call();
+                const groupsList = document.getElementById("groupsList");
+                groupsList.innerHTML = "";
 
-            groups.forEach((group, index) => {
-                const groupElement = document.createElement("div");
-                groupElement.classList.add("group-info");
-                groupElement.innerHTML = `
-                    <p><strong>Group Name:</strong> ${group.name}</p>
-                    <p><strong>Subject:</strong> ${group.subject}</p>
-                    <p><strong>Members:</strong> ${group.members.length}</p>
-                    <p><strong>Group ID:</strong> ${index}</p>
-                `;
-                groupsList.appendChild(groupElement);
-            });
-        }
+                groups.forEach(group => {
+                    if (!group.exists) return;
 
-        function listenToEvents() {
-            contract.events.GroupCreated()
-                .on('data', (event) => {
-                    console.log("New group created:", event.returnValues);
-                    alert(`New Group Created: ${event.returnValues.groupName}`);
-                    getGroups();
-                })
-                .on('error', (error) => {
-                    console.error("Error with GroupCreated event", error);
+                    const groupElement = document.createElement("div");
+                    groupElement.classList.add("group-info");
+
+                    let membersList = group.members.map((member, i) => `
+                        <p>Member ${i + 1}: ${member} (${group.memberNicknames[i]})</p>
+                    `).join("");
+
+                    groupElement.innerHTML = `
+                        <p><strong>Group ID:</strong> ${group.id}</p>
+                        <p><strong>Group Name:</strong> ${group.name}</p>
+                        <p><strong>Subject:</strong> ${group.subject}</p>
+                        <p><strong>Creator:</strong> ${group.creator}</p>
+                        <p><strong>Max Members:</strong> ${group.maxMembers}</p>
+                        <div>${membersList}</div>
+                    `;
+
+                    groupsList.appendChild(groupElement);
                 });
-
-            contract.events.UserJoined()
-                .on('data', (event) => {
-                    console.log("User joined a group:", event.returnValues);
-                    alert(`User Joined Group ID: ${event.returnValues.groupId}`);
-                    getGroups();
-                })
-                .on('error', (error) => {
-                    console.error("Error with UserJoined event", error);
-                });
+            } catch (error) {
+                alert(`Error fetching groups: ${error.message}`);
+            }
         }
 
         window.onload = async () => {
             await connectMetaMask();
             await initializeContract();
             await getGroups();
-            listenToEvents();
         };
     </script>
 </body>
+
 </html>
